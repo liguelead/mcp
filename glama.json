@@ -1,0 +1,10 @@
+{
+  "name": "liguelead-mcp",
+  "display_name": "LigueLead MCP Server",
+  "description": "SMS, SMS Flash & Voice campaigns via LigueLead (Brazil)",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "LigueLead Community",
+  "categories": ["communication", "sms", "voice"],
+  "tags": ["liguelead", "sms", "voice", "brazil", "mcp"]
+}

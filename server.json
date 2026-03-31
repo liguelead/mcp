@@ -1,0 +1,29 @@
+{
+  "name": "liguelead-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for LigueLead — SMS, SMS Flash & Voice campaigns (Brazil)",
+  "homepage": "https://github.com/your-org/liguelead-mcp",
+  "license": "MIT",
+  "tools": [
+    {
+      "name": "send_sms",
+      "description": "Send SMS or SMS Flash campaign"
+    },
+    {
+      "name": "list_voice_uploads",
+      "description": "List all uploaded voice audio files"
+    },
+    {
+      "name": "get_voice_upload",
+      "description": "Get details of a specific voice upload"
+    },
+    {
+      "name": "upload_voice_audio",
+      "description": "Upload MP3/WAV audio for voice campaigns"
+    },
+    {
+      "name": "send_voice_message",
+      "description": "Send a voice campaign to a list of phones"
+    }
+  ]
+}

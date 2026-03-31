@@ -1,0 +1,30 @@
+{
+  "name": "liguelead-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for LigueLead — SMS, SMS Flash & Voice campaigns",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "liguelead-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["mcp", "liguelead", "sms", "voice", "brazil"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "express": "^4.21.2",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}
