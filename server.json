@@ -1,29 +1,42 @@
 {
-  "name": "liguelead-mcp",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.liguelead/mcp-server",
+  "description": "MCP Server for sending SMS, SMS Flash, and voice calls in Brazil via LigueLead API. Enables Claude, Cursor, and AI agents to send real communications — BRL pricing, PIX payments, PT-BR support.",
+  "title": "LigueLead",
+  "websiteUrl": "https://docs.liguelead.com.br",
+  "repository": {
+    "url": "https://github.com/liguelead/mcp",
+    "source": "github"
+  },
   "version": "1.0.0",
-  "description": "MCP Server for LigueLead — SMS, SMS Flash & Voice campaigns (Brazil)",
-  "homepage": "https://github.com/your-org/liguelead-mcp",
-  "license": "MIT",
-  "tools": [
+  "packages": [
     {
-      "name": "send_sms",
-      "description": "Send SMS or SMS Flash campaign"
-    },
-    {
-      "name": "list_voice_uploads",
-      "description": "List all uploaded voice audio files"
-    },
-    {
-      "name": "get_voice_upload",
-      "description": "Get details of a specific voice upload"
-    },
-    {
-      "name": "upload_voice_audio",
-      "description": "Upload MP3/WAV audio for voice campaigns"
-    },
-    {
-      "name": "send_voice_message",
-      "description": "Send a voice campaign to a list of phones"
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@liguelead/mcp-server",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "LIGUELEAD_API_TOKEN",
+          "description": "API token from LigueLead dashboard (areadocliente.liguelead.app.br → Integrações → API Token)",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "LIGUELEAD_APP_ID",
+          "description": "App ID from LigueLead dashboard",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "TRANSPORT",
+          "description": "Transport type: 'stdio' for local clients, 'http' for remote server",
+          "default": "http"
+        }
+      ]
     }
   ]
 }
