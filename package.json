@@ -1,6 +1,6 @@
 {
   "name": "@liguelead/mcp-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP Server for LigueLead — SMS, SMS Flash & Voice campaigns in Brazil. Enables Claude, Cursor, and AI agents to send real communications via LigueLead API.",
   "type": "module",
   "main": "dist/index.js",
@@ -13,7 +13,28 @@
     "dev": "tsc --watch",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["mcp", "mcp-server", "model-context-protocol", "liguelead", "sms", "sms-flash", "voice", "voice-call", "telephony", "cpaas", "brazil", "brazilian", "communication", "ai-tools", "claude", "cursor", "anthropic", "automation", "n8n", "notification"],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "liguelead",
+    "sms",
+    "sms-flash",
+    "voice",
+    "voice-call",
+    "telephony",
+    "cpaas",
+    "brazil",
+    "brazilian",
+    "communication",
+    "ai-tools",
+    "claude",
+    "cursor",
+    "anthropic",
+    "automation",
+    "n8n",
+    "notification"
+  ],
   "license": "MIT",
   "homepage": "https://github.com/liguelead/mcp#readme",
   "repository": {
