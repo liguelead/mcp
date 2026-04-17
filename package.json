@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "liguelead-mcp-server": "dist/index.js"
+    "mcp-server": "dist/index.js"
   },
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
