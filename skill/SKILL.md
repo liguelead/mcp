@@ -1,22 +1,23 @@
 ---
 name: liguelead-api
 description: >
-  Send voice calls, SMS, and SMS Flash messages in Brazil via the LigueLead API.
+  Send voice calls, SMS, SMS Flash, and RCS messages in Brazil via the LigueLead API.
   Use this skill whenever the user mentions LigueLead, wants to send automated
-  calls, SMS blasts, SMS Flash, or configure webhooks for campaign status.
-  Also use when the user asks about credentials, authentication, API limits,
-  or integration best practices with LigueLead.
+  calls, SMS blasts, SMS Flash, RCS campaigns/templates, or configure webhooks
+  for campaign status. Also use when the user asks about credentials,
+  authentication, API limits, or integration best practices with LigueLead.
 ---
 
 # LigueLead API – Integration Skill
 
 ## Overview
 
-LigueLead is a Brazilian communications platform for voice and SMS. This skill covers:
+LigueLead is a Brazilian communications platform for voice, SMS, and RCS. This skill covers:
 
 - **Authentication** via dual-header (`api-token` + `app-id`)
 - **Voice calls** (2-step process: upload audio → send campaign)
 - **SMS** (standard and Flash) in a single request
+- **RCS** (template creation — text/media/card/carousel — then send)
 - **Webhooks** for real-time campaign status
 
 **Base URL:** `https://api.liguelead.com.br/v1`
@@ -186,7 +187,82 @@ curl -X POST "https://api.liguelead.com.br/v1/sms" \
 
 ---
 
-## 5. Webhooks — Receive campaign status
+## 5. Sending RCS
+
+RCS campaigns are template-based (or freeform) and require an app-approved sender —
+templates persist in a registry, then are referenced by `template_id` when sending.
+
+### Step 1 — Create a template
+
+Four template types, chosen by content shape:
+
+| Type | Endpoint | Use when |
+|------|----------|----------|
+| Text | `POST /v1/rcs/templates/text` | Plain message, no media/buttons |
+| Media | `POST /v1/rcs/templates/media` | Image or short video |
+| Rich card | `POST /v1/rcs/templates/card` | Media + 1–4 interactive buttons |
+| Carousel | `POST /v1/rcs/templates/carousel` | 2–10 rich cards, horizontally scrollable |
+
+```bash
+curl -X POST "https://api.liguelead.com.br/v1/rcs/templates/text" \
+  -H "api-token: YOUR_API_TOKEN" \
+  -H "app-id: YOUR_APP_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Welcome Text",
+    "body": "Hi {{1}}, welcome to LigueLead!",
+    "default_variables": [{"key": "1", "value": "friend"}],
+    "fallback_message": "Welcome to LigueLead!"
+  }'
+```
+
+**Response (201):**
+```json
+{
+  "data": {
+    "template_id": "tpl_abc123",
+    "title": "Welcome Text"
+  }
+}
+```
+
+> `body`/card `body` max 1,600 chars; `fallback_message` max 306 chars (used as SMS if RCS fails).
+> `{{N}}` placeholders in the body can have defaults set via `default_variables` (array of `{key, value}`, key = numeric string).
+
+**Media / rich card `media_url` vs `media_file`:** mutually exclusive. `media_file` is a base64 data URI, max 5 MB decoded.
+
+**Rich card buttons** (1–4, `type`: `reply` | `open_url` | `dial_call`):
+- `open_url` requires `url`
+- `dial_call` requires `phone_number` (E.164)
+- `reply` may carry `postback_data` (max 2048 chars), echoed on the webhook
+
+**Carousel cards** (2–10): each card has its own `header`/`body`/media, and 0–2 buttons — but **all cards must declare the same number of buttons, in the same type/order**.
+
+### Step 2 — Send the message
+
+**`POST /v1/rcs`**
+
+```bash
+curl -X POST "https://api.liguelead.com.br/v1/rcs" \
+  -H "api-token: YOUR_API_TOKEN" \
+  -H "app-id: YOUR_APP_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phones": ["11999999999", "+5521888888888"],
+    "template_id": "tpl_abc123",
+    "template_variables": [{"key": "1", "value": "Beatriz"}]
+  }'
+```
+
+`template_id` and freeform `message` (max 306 chars, also reused as the SMS fallback) are mutually exclusive — pick one per request.
+
+**Response (202 Accepted):** same shape as SMS/Voice — `campaign_id` + `accepted_at`; delivery status arrives via webhook.
+
+**Validation (422):** mutual-exclusivity violations, character limits, malformed `template_variables`, or non-homogeneous carousel buttons.
+
+---
+
+## 6. Webhooks — Receive campaign status
 
 ### Quick setup
 
@@ -195,7 +271,7 @@ curl -X POST "https://api.liguelead.com.br/v1/sms" \
 3. Enter your public HTTPS endpoint URL
 4. Save
 
-**A single URL receives notifications for all channels** (SMS, SMS Flash, Voice). Use `campaign.type` and `campaign.is_flash` to differentiate.
+**A single URL receives notifications for all channels** (SMS, SMS Flash, Voice, RCS). Use `campaign.type` and `campaign.is_flash` to differentiate.
 
 ### Payload structure (all channels)
 
@@ -224,6 +300,7 @@ curl -X POST "https://api.liguelead.com.br/v1/sms" \
 |---------|-------------|
 | SMS / SMS Flash | `campaign.message`, `campaign.is_flash` |
 | Voice | voice-specific call fields |
+| RCS | `campaign.template_id` (template-based sends), `campaign.message` (freeform sends) |
 
 ### Possible statuses
 
@@ -244,7 +321,7 @@ curl -X POST "https://api.liguelead.com.br/v1/sms" \
 
 ---
 
-## 6. Rate limits
+## 7. Rate limits
 
 | Limit | Value |
 |-------|-------|
@@ -263,23 +340,25 @@ X-RateLimit-Reset: 1640995260
 
 ---
 
-## 7. Error codes
+## 8. Error codes
 
 | Code | Meaning |
 |------|---------|
 | `200` | Success |
-| `201` | Created (audio upload) |
+| `201` | Created (audio upload, RCS template) |
 | `202` | Accepted (async operation queued) |
 | `400` | Invalid request |
 | `401` | Unauthorized (check `api-token` and `app-id`) |
+| `422` | Validation error (RCS template/send — field errors or mutual-exclusivity violations) |
 | `429` | Rate limit exceeded |
 | `500` | Internal server error |
 
 ---
 
-## 8. Best practices
+## 9. Best practices
 
 - **Reuse audio:** upload once, use the same `voice_upload_id` across multiple campaigns
+- **Reuse RCS templates:** create once, use the returned `template_id` across multiple `send_rcs` calls
 - **Batch first:** send to many numbers in a single request (up to 10k) instead of multiple individual requests
 - **Respond fast on webhook:** return HTTP 200 immediately and process in background (queue/worker)
 - **Idempotency on webhook:** use `campaign.id + campaign.status + occurred_at` as unique key to avoid duplicate processing

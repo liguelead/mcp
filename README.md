@@ -1,6 +1,6 @@
 # 📱 LigueLead MCP Server
 
-> MCP Server for sending **SMS**, **SMS Flash**, and **voice calls** in Brazil via the [LigueLead API](https://docs.liguelead.com.br).
+> MCP Server for sending **SMS**, **SMS Flash**, **voice calls**, and **RCS** in Brazil via the [LigueLead API](https://docs.liguelead.com.br).
 > Enable **Claude**, **Cursor**, **Windsurf**, and any MCP-compatible AI agent to send real communications — no code, no complex setup.
 
 🇧🇷 **Brazilian CPaaS** · BRL pricing · PIX payments · PT-BR support
@@ -19,6 +19,12 @@
 | `get_voice_upload` | Get details of a specific voice upload |
 | `upload_voice_audio` | Upload MP3/WAV audio for voice campaigns |
 | `send_voice_message` | Send a voice campaign to a list of phones |
+| `list_rcs_templates` | List every registered RCS template |
+| `create_rcs_template_text` | Create a plain-text RCS template |
+| `create_rcs_template_media` | Create an RCS template with image/video |
+| `create_rcs_template_card` | Create a rich card RCS template with buttons |
+| `create_rcs_template_carousel` | Create a carousel RCS template (2-10 cards) |
+| `send_rcs` | Send an RCS campaign (template-based or freeform) |
 
 ## Quick start
 
@@ -168,7 +174,7 @@ docker run -d -p 3000:3000 \
 3. Enter your public HTTPS endpoint URL
 4. Save
 
-A single URL receives notifications for all channels (SMS, SMS Flash, Voice).
+A single URL receives notifications for all channels (SMS, SMS Flash, Voice, RCS).
 
 ### Query received webhooks
 
@@ -214,6 +220,25 @@ Brazilian phone numbers are accepted in three formats:
 - **Billing:** Up to 30s = 1 credit; over 30s = 2 credits
 - **Dialing window:** 08:00–21:44 (America/Sao_Paulo). Requests after 21:45 are queued until 08:00.
 
+## RCS templates & limits
+
+RCS campaigns are built from a template registered via one of the `create_rcs_template_*`
+tools, then sent with `send_rcs` using the returned `template_id` (or as a freeform,
+template-less message).
+
+| Template type | Tool | Notes |
+|----------------|------|-------|
+| Text | `create_rcs_template_text` | Plain text, no media/buttons |
+| Media | `create_rcs_template_media` | Image or short video (`media_url` or `media_file`, mutually exclusive) |
+| Rich card | `create_rcs_template_card` | Optional media + 1-4 buttons (`reply`, `open_url`, `dial_call`) |
+| Carousel | `create_rcs_template_carousel` | 2-10 rich cards; all cards must declare the same button count/type/order |
+
+- `body` max 1,600 chars; supports `{{N}}` variable placeholders, overridable via `default_variables` (template) or `template_variables` (send time)
+- `media_file` accepts a base64 data URI, max 5 MB decoded
+- `fallback_message` (max 306 chars) is the SMS sent if RCS delivery fails
+- `send_rcs` freeform `message` is capped at 306 chars (mutually exclusive with `template_id`) — reused as the SMS fallback
+- Async operation — returns 202 when queued; delivery status arrives via the configured webhook
+
 ## Rate limits
 
 | Limit | Value |
@@ -231,11 +256,12 @@ liguelead-mcp/
 │   ├── config.ts          # Env var validation (Zod) + .env loader
 │   ├── lib/
 │   │   ├── api-client.ts  # HTTP client for LigueLead API
-│   │   ├── validators.ts  # Brazilian phone schemas (Zod)
+│   │   ├── validators.ts  # Phone/RCS schemas (Zod)
 │   │   └── webhook.ts     # Webhook handler + GET /webhooks
 │   └── tools/
 │       ├── sms.ts         # Tool: send_sms
-│       └── voice.ts       # Tools: voice (list/get/upload/send)
+│       ├── voice.ts       # Tools: voice (list/get/upload/send)
+│       └── rcs.ts         # Tools: RCS (templates + send_rcs)
 ├── skill/                  # Claude Code Skill
 │   └── SKILL.md
 ├── .env.example
@@ -269,7 +295,7 @@ MIT
 
 ## LigueLead MCP Server
 
-MCP Server para a API da LigueLead — SMS, SMS Flash e Campanhas de Voz no Brasil.
+MCP Server para a API da LigueLead — SMS, SMS Flash, Campanhas de Voz e RCS no Brasil.
 
 Permite que **Claude**, **Cursor**, **Windsurf** e qualquer agente de IA compatível com MCP enviem comunicações reais — sem código, sem setup complexo.
 
@@ -323,6 +349,12 @@ npm start
 | `get_voice_upload` | Detalhes de um áudio específico |
 | `upload_voice_audio` | Upload de áudio MP3/WAV para campanhas de voz |
 | `send_voice_message` | Dispara campanha de voz para lista de telefones |
+| `list_rcs_templates` | Lista todos os templates de RCS cadastrados |
+| `create_rcs_template_text` | Cria um template de RCS somente texto |
+| `create_rcs_template_media` | Cria um template de RCS com imagem/vídeo |
+| `create_rcs_template_card` | Cria um template de RCS com rich card e botões |
+| `create_rcs_template_carousel` | Cria um template de RCS carrossel (2-10 cards) |
+| `send_rcs` | Dispara uma campanha de RCS (com template ou texto livre) |
 
 ### Configuração por cliente MCP
 
@@ -381,6 +413,25 @@ claude mcp add -s user liguelead \
 - **Cobrança:** Até 30s = 1 crédito; acima de 30s = 2 créditos
 - **Janela de discagem:** 08h00–21h44 (America/Sao_Paulo). Requests após 21h45 ficam na fila até as 08h00.
 
+### Templates e limites de RCS
+
+Uma campanha de RCS é criada a partir de um template registrado com uma das tools
+`create_rcs_template_*`, e enviada com `send_rcs` usando o `template_id` retornado
+(ou como mensagem livre, sem template).
+
+| Tipo de template | Tool | Observações |
+|-------------------|------|--------------|
+| Texto | `create_rcs_template_text` | Somente texto, sem mídia/botões |
+| Mídia | `create_rcs_template_media` | Imagem ou vídeo curto (`media_url` ou `media_file`, mutuamente exclusivos) |
+| Rich card | `create_rcs_template_card` | Mídia opcional + 1-4 botões (`reply`, `open_url`, `dial_call`) |
+| Carrossel | `create_rcs_template_carousel` | 2-10 rich cards; todos os cards devem declarar o mesmo número/tipo/ordem de botões |
+
+- `body` até 1.600 chars; suporta placeholders `{{N}}`, sobrescrevíveis via `default_variables` (template) ou `template_variables` (no envio)
+- `media_file` aceita um data URI em base64, máximo 5 MB decodificado
+- `fallback_message` (máx 306 chars) é o SMS enviado caso a entrega via RCS falhe
+- O `message` livre do `send_rcs` é limitado a 306 chars (mutuamente exclusivo com `template_id`) — reaproveitado como fallback de SMS
+- Operação assíncrona — retorna 202 ao ser enfileirada; o status chega pelo webhook configurado
+
 ### Webhook
 
 1. Acesse [areadocliente.liguelead.app.br](https://areadocliente.liguelead.app.br/)
@@ -388,6 +439,6 @@ claude mcp add -s user liguelead \
 3. Insira a URL HTTPS do seu endpoint
 4. Salve
 
-Uma única URL recebe notificações de todos os canais (SMS, SMS Flash, Voz).
+Uma única URL recebe notificações de todos os canais (SMS, SMS Flash, Voz, RCS).
 
 ⚠️ **CRÍTICO:** LigueLead NÃO faz retry. Se o endpoint falhar, o webhook é perdido permanentemente.

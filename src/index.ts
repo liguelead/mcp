@@ -7,18 +7,20 @@ import { config } from "./config.js";
 import { registerWebhookEndpoint } from "./lib/webhook.js";
 import { registerSmsTools } from "./tools/sms.js";
 import { registerVoiceTools } from "./tools/voice.js";
+import { registerRcsTools } from "./tools/rcs.js";
 import { randomUUID } from "node:crypto";
 
 // ── Create MCP server ──────────────────────────────────────────────
 const server = new McpServer({
   name: "liguelead-mcp",
-  version: "1.0.0",
+  version: "1.1.0",
   description:
-    "MCP Server for LigueLead — SMS, SMS Flash & Voice campaigns (Brazil)",
+    "MCP Server for LigueLead — SMS, SMS Flash, Voice & RCS campaigns (Brazil)",
 });
 
 registerSmsTools(server);
 registerVoiceTools(server);
+registerRcsTools(server);
 
 // ── Transport selection ────────────────────────────────────────────
 if (config.TRANSPORT === "stdio") {
@@ -33,7 +35,7 @@ if (config.TRANSPORT === "stdio") {
 
   // Health check
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", server: "liguelead-mcp", version: "1.0.0" });
+    res.json({ status: "ok", server: "liguelead-mcp", version: "1.1.0" });
   });
 
   // Webhook (ONLY handler — no duplicate registration)
@@ -68,12 +70,13 @@ if (config.TRANSPORT === "stdio") {
 
     const mcpServerInstance = new McpServer({
       name: "liguelead-mcp",
-      version: "1.0.0",
+      version: "1.1.0",
       description:
-        "MCP Server for LigueLead — SMS, SMS Flash & Voice campaigns (Brazil)",
+        "MCP Server for LigueLead — SMS, SMS Flash, Voice & RCS campaigns (Brazil)",
     });
     registerSmsTools(mcpServerInstance);
     registerVoiceTools(mcpServerInstance);
+    registerRcsTools(mcpServerInstance);
 
     await mcpServerInstance.connect(transport);
     await transport.handleRequest(req, res, req.body);

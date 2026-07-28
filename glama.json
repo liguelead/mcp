@@ -1,12 +1,12 @@
 {
   "name": "liguelead-mcp",
   "display_name": "LigueLead MCP Server",
-  "description": "Send SMS, SMS Flash & voice calls in Brazil via LigueLead API. Brazilian CPaaS with BRL pricing, PIX payments, and PT-BR support. Enables Claude, Cursor, and AI agents to send real communications.",
-  "version": "1.0.0",
+  "description": "Send SMS, SMS Flash, voice calls & RCS in Brazil via LigueLead API. Brazilian CPaaS with BRL pricing, PIX payments, and PT-BR support. Enables Claude, Cursor, and AI agents to send real communications.",
+  "version": "1.1.0",
   "license": "MIT",
   "author": "LigueLead",
-  "categories": ["communication", "sms", "voice", "telephony"],
-  "tags": ["brazil", "cpaas", "sms-flash", "voice-call", "automation", "n8n", "mcp-server"],
+  "categories": ["communication", "sms", "voice", "rcs", "telephony"],
+  "tags": ["brazil", "cpaas", "sms-flash", "voice-call", "rcs", "automation", "n8n", "mcp-server"],
   "homepage": "https://github.com/liguelead/mcp",
   "repository": "https://github.com/liguelead/mcp"
 }
