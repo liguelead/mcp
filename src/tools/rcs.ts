@@ -43,14 +43,15 @@ function validateButtons(buttons: z.infer<typeof RcsButtonSchema>[]): string | n
 }
 
 export function registerRcsTools(server: McpServer): void {
-  // ── list_rcs_templates ───────────────────────────────────────────
+  // ── list_rcs_agents ──────────────────────────────────────────────
   server.tool(
-    "list_rcs_templates",
-    "List every RCS template registered for the authenticated client. " +
-      "Useful to look up template_id values for send_rcs.",
+    "list_rcs_agents",
+    "List every RCS agent (sender brand) registered for the authenticated client, " +
+      "with its review status. Useful to look up agent_id values for send_rcs — " +
+      'only agents with status "approved" can send.',
     {},
     async () => {
-      const res = await apiRequest("GET", "/rcs/templates");
+      const res = await apiRequest("GET", "/rcs/agents");
       return {
         content: [
           { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
@@ -337,6 +338,13 @@ export function registerRcsTools(server: McpServer): void {
       phones: PhonesArraySchema.describe(
         "Array of Brazilian phone numbers (max 10,000)",
       ),
+      agent_id: z
+        .string()
+        .uuid()
+        .describe(
+          "ID of the approved RCS agent (sender brand shown on the device). " +
+            "Required on every send — use list_rcs_agents to find it",
+        ),
       template_id: z
         .string()
         .optional()
@@ -355,7 +363,7 @@ export function registerRcsTools(server: McpServer): void {
             "Mutually exclusive with template_id",
         ),
     },
-    async ({ phones, template_id, template_variables, message }) => {
+    async ({ phones, agent_id, template_id, template_variables, message }) => {
       if (template_id && message) {
         return errorContent(
           "template_id and message are mutually exclusive — provide only one.",
@@ -365,7 +373,7 @@ export function registerRcsTools(server: McpServer): void {
         return errorContent("Provide either template_id or message.");
       }
 
-      const payload: Record<string, unknown> = { phones };
+      const payload: Record<string, unknown> = { phones, agent_id };
       if (template_id) payload.template_id = template_id;
       if (template_variables) payload.template_variables = template_variables;
       if (message) payload.message = message;

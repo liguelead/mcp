@@ -19,7 +19,7 @@
 | `get_voice_upload` | Get details of a specific voice upload |
 | `upload_voice_audio` | Upload MP3/WAV audio for voice campaigns |
 | `send_voice_message` | Send a voice campaign to a list of phones |
-| `list_rcs_templates` | List every registered RCS template |
+| `list_rcs_agents` | List RCS agents (sender brands) and their review status |
 | `create_rcs_template_text` | Create a plain-text RCS template |
 | `create_rcs_template_media` | Create an RCS template with image/video |
 | `create_rcs_template_card` | Create a rich card RCS template with buttons |
@@ -349,7 +349,7 @@ npm start
 | `get_voice_upload` | Detalhes de um áudio específico |
 | `upload_voice_audio` | Upload de áudio MP3/WAV para campanhas de voz |
 | `send_voice_message` | Dispara campanha de voz para lista de telefones |
-| `list_rcs_templates` | Lista todos os templates de RCS cadastrados |
+| `list_rcs_agents` | Lista os agentes de RCS (marcas remetentes) e o status de aprovação |
 | `create_rcs_template_text` | Cria um template de RCS somente texto |
 | `create_rcs_template_media` | Cria um template de RCS com imagem/vídeo |
 | `create_rcs_template_card` | Cria um template de RCS com rich card e botões |
