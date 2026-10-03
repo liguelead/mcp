@@ -331,8 +331,9 @@ export function registerRcsTools(server: McpServer): void {
   server.tool(
     "send_rcs",
     "Send an RCS campaign to a list of phones. Either template_id (with optional " +
-      "template_variables overrides) or a freeform message (max 306 chars, also reused " +
-      "as the SMS fallback) — the two are mutually exclusive. " +
+      "template_variables overrides; the sender is the template's own agent) or a freeform " +
+      "message (max 306 chars, also reused as the SMS fallback) together with agent_id — " +
+      "template_id and message are mutually exclusive. " +
       "Async operation — returns 202 when queued.",
     {
       phones: PhonesArraySchema.describe(
@@ -341,9 +342,11 @@ export function registerRcsTools(server: McpServer): void {
       agent_id: z
         .string()
         .uuid()
+        .optional()
         .describe(
           "ID of the approved RCS agent (sender brand shown on the device). " +
-            "Required on every send — use list_rcs_agents to find it",
+            "Required with message, must be omitted with template_id (the template " +
+            "already carries its agent). Use list_rcs_agents to find it",
         ),
       template_id: z
         .string()
@@ -372,8 +375,19 @@ export function registerRcsTools(server: McpServer): void {
       if (!template_id && !message) {
         return errorContent("Provide either template_id or message.");
       }
+      if (message && !agent_id) {
+        return errorContent(
+          "agent_id is required when sending message — use list_rcs_agents to find it.",
+        );
+      }
+      if (template_id && agent_id) {
+        return errorContent(
+          "agent_id must not be sent with template_id — the template already carries its agent.",
+        );
+      }
 
-      const payload: Record<string, unknown> = { phones, agent_id };
+      const payload: Record<string, unknown> = { phones };
+      if (agent_id) payload.agent_id = agent_id;
       if (template_id) payload.template_id = template_id;
       if (template_variables) payload.template_variables = template_variables;
       if (message) payload.message = message;

@@ -237,6 +237,7 @@ template-less message).
 - `media_file` accepts a base64 data URI, max 5 MB decoded
 - `fallback_message` (max 306 chars) is the SMS sent if RCS delivery fails
 - `send_rcs` freeform `message` is capped at 306 chars (mutually exclusive with `template_id`) — reused as the SMS fallback
+- `send_rcs` freeform `message` requires `agent_id` (see `list_rcs_agents`); template sends must omit it, since the template carries its own agent
 - Async operation — returns 202 when queued; delivery status arrives via the configured webhook
 
 ## Rate limits
@@ -430,6 +431,7 @@ Uma campanha de RCS é criada a partir de um template registrado com uma das too
 - `media_file` aceita um data URI em base64, máximo 5 MB decodificado
 - `fallback_message` (máx 306 chars) é o SMS enviado caso a entrega via RCS falhe
 - O `message` livre do `send_rcs` é limitado a 306 chars (mutuamente exclusivo com `template_id`) — reaproveitado como fallback de SMS
+- O `message` livre do `send_rcs` exige `agent_id` (veja `list_rcs_agents`); no envio com template ele não deve ser enviado, pois o template já tem o agente dele
 - Operação assíncrona — retorna 202 ao ser enfileirada; o status chega pelo webhook configurado
 
 ### Webhook
