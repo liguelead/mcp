@@ -39,4 +39,7 @@ if (!parsed.success) {
 
 export const config = parsed.data;
 
-export const LIGUELEAD_BASE_URL = "https://api.liguelead.com.br/v1";
+// Overridable for staging/tests; defaults to production
+export const LIGUELEAD_BASE_URL = (
+  process.env.LIGUELEAD_BASE_URL?.trim() || "https://api.liguelead.com.br/v1"
+).replace(/\/$/, "");

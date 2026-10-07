@@ -13,7 +13,7 @@ import { randomUUID } from "node:crypto";
 // ── Create MCP server ──────────────────────────────────────────────
 const server = new McpServer({
   name: "liguelead-mcp",
-  version: "1.2.0",
+  version: "1.3.0",
   description:
     "MCP Server for LigueLead — SMS, SMS Flash, Voice & RCS campaigns (Brazil)",
 });
@@ -35,7 +35,7 @@ if (config.TRANSPORT === "stdio") {
 
   // Health check
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", server: "liguelead-mcp", version: "1.2.0" });
+    res.json({ status: "ok", server: "liguelead-mcp", version: "1.3.0" });
   });
 
   // Webhook (ONLY handler — no duplicate registration)
@@ -70,7 +70,7 @@ if (config.TRANSPORT === "stdio") {
 
     const mcpServerInstance = new McpServer({
       name: "liguelead-mcp",
-      version: "1.2.0",
+      version: "1.3.0",
       description:
         "MCP Server for LigueLead — SMS, SMS Flash, Voice & RCS campaigns (Brazil)",
     });

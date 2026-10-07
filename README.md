@@ -219,6 +219,11 @@ Brazilian phone numbers are accepted in three formats:
 - **Max file size:** 50 MB (recommended: 5–10 MB)
 - **Billing:** Up to 30s = 1 credit; over 30s = 2 credits
 - **Dialing window:** 08:00–21:44 (America/Sao_Paulo). Requests after 21:45 are queued until 08:00.
+- **Retries (`send_voice_message`):** `retry_attempts` (1–3, default 3), `retry_interval_min` (5–180, default 15) and `retry_end_time` (HH:MM, 08:00–21:45, at least 10 minutes from now)
+
+## Per-send webhook
+
+`send_sms`, `send_voice_message` and `send_rcs` accept an optional `webhook_url` that receives that send's status events instead of the app's webhook URL. It is called exactly as written, so it can carry your own identifiers (e.g. `?order=123`). Public `http`/`https` only, no `_` in the hostname, max 512 chars.
 
 ## RCS templates & limits
 
@@ -280,7 +285,9 @@ liguelead-mcp/
 |---------|----------|
 | `LIGUELEAD_API_TOKEN is required` | Set up `.env` or environment variables |
 | `401 Unauthorized` | Check api-token and app-id in LigueLead panel |
-| `429 Too Many Requests` | Rate limit exceeded — wait for reset |
+| `429 Too Many Requests` | Rate limit exceeded — wait for reset, group phones in one call |
+| `429 Failed to call ligueapi-backend` on `send_rcs` | LigueLead's internal agent validation is throttled (the send was not queued). Use `retry_when_busy: true`, space out calls or group phones in one call |
+| Any other error | Errors include the HTTP status, LigueLead's reason, what it means and support IDs (`x-amzn-requestid`) to send to LigueLead |
 | Upload rejected | Only MP3 and WAV accepted (no AAC/M4A) |
 | Stale build | `rm -rf dist && npm run build` |
 
@@ -413,6 +420,15 @@ claude mcp add -s user liguelead \
 - **Tamanho máximo:** 50 MB (recomendado: 5–10 MB)
 - **Cobrança:** Até 30s = 1 crédito; acima de 30s = 2 créditos
 - **Janela de discagem:** 08h00–21h44 (America/Sao_Paulo). Requests após 21h45 ficam na fila até as 08h00.
+- **Retentativas (`send_voice_message`):** `retry_attempts` (1–3, padrão 3), `retry_interval_min` (5–180, padrão 15) e `retry_end_time` (HH:MM, entre 08:00 e 21:45, pelo menos 10 minutos à frente)
+
+### Webhook por envio
+
+`send_sms`, `send_voice_message` e `send_rcs` aceitam um `webhook_url` opcional, que recebe os status daquele envio no lugar do webhook do app. Ele é chamado exatamente como escrito, então pode levar seus identificadores (ex.: `?pedido=123`). Só `http`/`https` público, sem `_` no domínio, até 512 caracteres.
+
+### Erros
+
+Todo erro traz o status HTTP, o motivo informado pela LigueLead, o que ele significa e IDs para o suporte (`x-amzn-requestid`). O `429 Failed to call ligueapi-backend` no `send_rcs` é o limite interno da validação do agente da LigueLead (o envio não foi enfileirado): use `retry_when_busy: true`, espace os envios ou agrupe os telefones numa chamada.
 
 ### Templates e limites de RCS
 

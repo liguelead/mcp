@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { apiRequest } from "../lib/api-client.js";
-import { PhonesArraySchema } from "../lib/validators.js";
+import { apiRequest, toToolResult } from "../lib/api-client.js";
+import { PhonesArraySchema, WebhookUrlSchema } from "../lib/validators.js";
 
 export function registerSmsTools(server: McpServer): void {
   server.tool(
@@ -31,8 +31,9 @@ export function registerSmsTools(server: McpServer): void {
         .boolean()
         .default(false)
         .describe("true = Flash SMS (no URLs allowed), false = standard SMS"),
+      webhook_url: WebhookUrlSchema,
     },
-    async ({ title, message, phones, group_id, is_flash }) => {
+    async ({ title, message, phones, group_id, is_flash, webhook_url }) => {
       // Flash SMS cannot contain URLs
       if (is_flash && /https?:\/\//i.test(message)) {
         return {
@@ -49,18 +50,11 @@ export function registerSmsTools(server: McpServer): void {
       const body: Record<string, unknown> = { message, phones, is_flash };
       if (title) body.title = title;
       if (group_id) body.group_id = group_id;
+      if (webhook_url) body.webhook_url = webhook_url;
 
       const res = await apiRequest("POST", "/sms", body);
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(res.body, null, 2),
-          },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 }

@@ -1,10 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { apiRequest } from "../lib/api-client.js";
+import { apiRequest, isInternalAgentThrottle, toToolResult } from "../lib/api-client.js";
 import {
   PhonesArraySchema,
   RcsButtonSchema,
   TemplateVariablesSchema,
+  WebhookUrlSchema,
 } from "../lib/validators.js";
 
 function errorContent(text: string) {
@@ -52,12 +53,7 @@ export function registerRcsTools(server: McpServer): void {
     {},
     async () => {
       const res = await apiRequest("GET", "/rcs/agents");
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -91,12 +87,7 @@ export function registerRcsTools(server: McpServer): void {
       if (fallback_message) payload.fallback_message = fallback_message;
 
       const res = await apiRequest("POST", "/rcs/templates/text", payload);
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -162,12 +153,7 @@ export function registerRcsTools(server: McpServer): void {
       if (default_variables) payload.default_variables = default_variables;
 
       const res = await apiRequest("POST", "/rcs/templates/media", payload);
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -235,12 +221,7 @@ export function registerRcsTools(server: McpServer): void {
       if (default_variables) payload.default_variables = default_variables;
 
       const res = await apiRequest("POST", "/rcs/templates/card", payload);
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -318,12 +299,7 @@ export function registerRcsTools(server: McpServer): void {
       if (default_variables) payload.default_variables = default_variables;
 
       const res = await apiRequest("POST", "/rcs/templates/carousel", payload);
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -365,8 +341,25 @@ export function registerRcsTools(server: McpServer): void {
           "Freeform message for template-less sends (max 306 chars, reused as SMS fallback). " +
             "Mutually exclusive with template_id",
         ),
+      webhook_url: WebhookUrlSchema,
+      retry_when_busy: z
+        .boolean()
+        .default(false)
+        .describe(
+          'Retry up to 3 times (2s, 4s, 8s) when LigueLead answers 429 "Failed to call ligueapi-backend". ' +
+            "That error comes from LigueLead's internal agent validation and happens before the send is queued, " +
+            "so retrying does not duplicate messages",
+        ),
     },
-    async ({ phones, agent_id, template_id, template_variables, message }) => {
+    async ({
+      phones,
+      agent_id,
+      template_id,
+      template_variables,
+      message,
+      webhook_url,
+      retry_when_busy,
+    }) => {
       if (template_id && message) {
         return errorContent(
           "template_id and message are mutually exclusive — provide only one.",
@@ -391,14 +384,26 @@ export function registerRcsTools(server: McpServer): void {
       if (template_id) payload.template_id = template_id;
       if (template_variables) payload.template_variables = template_variables;
       if (message) payload.message = message;
+      if (webhook_url) payload.webhook_url = webhook_url;
 
-      const res = await apiRequest("POST", "/rcs", payload);
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      // Send straight away (no lookups); only the internal agent-validation 429 is retried
+      const attempts = retry_when_busy ? 4 : 1;
+      let res = await apiRequest("POST", "/rcs", payload);
+      for (let attempt = 2; attempt <= attempts && isInternalAgentThrottle(res); attempt++) {
+        const retryAfter = Number(res.headers.get("retry-after"));
+        const waitMs =
+          Number.isFinite(retryAfter) && retryAfter > 0
+            ? Math.min(retryAfter, 30) * 1000
+            : 2000 * 2 ** (attempt - 2);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        res = await apiRequest("POST", "/rcs", payload);
+      }
+      return toToolResult(
+        res,
+        retry_when_busy && isInternalAgentThrottle(res)
+          ? "Already retried 3 times; LigueLead's internal agent validation is still busy. Wait a bit before sending again."
+          : undefined,
+      );
     },
   );
 }

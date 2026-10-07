@@ -1,7 +1,35 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { apiRequest, apiUpload } from "../lib/api-client.js";
-import { PhonesArraySchema } from "../lib/validators.js";
+import { apiRequest, apiUpload, toToolResult } from "../lib/api-client.js";
+import { PhonesArraySchema, WebhookUrlSchema } from "../lib/validators.js";
+
+/** Same window rules as the API, checked up front so the reason is explicit */
+function checkRetryEndTime(time: string): string | undefined {
+  const [h, m] = time.split(":").map(Number);
+  const minutes = h * 60 + m;
+  if (minutes < 8 * 60 || minutes > 21 * 60 + 45) {
+    return `retry_end_time ${time} is outside the allowed window 08:00-21:45 (America/Sao_Paulo).`;
+  }
+  const [nowH, nowM] = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+    .format(new Date())
+    .split(":")
+    .map(Number);
+  const nowMinutes = nowH * 60 + nowM;
+  if (minutes < nowMinutes + 10) {
+    const earliest = nowMinutes + 10;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return (
+      `retry_end_time ${time} must be at least 10 minutes from now ` +
+      `(now ${pad(nowH)}:${pad(nowM)} in Sao Paulo; earliest ${pad(Math.floor(earliest / 60))}:${pad(earliest % 60)}).`
+    );
+  }
+  return undefined;
+}
 
 export function registerVoiceTools(server: McpServer): void {
   // ── list_voice_uploads ───────────────────────────────────────────
@@ -11,12 +39,7 @@ export function registerVoiceTools(server: McpServer): void {
     {},
     async () => {
       const res = await apiRequest("GET", "/voice/uploads");
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -29,12 +52,7 @@ export function registerVoiceTools(server: McpServer): void {
     },
     async ({ id }) => {
       const res = await apiRequest("GET", `/voice/uploads/${id}`);
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -95,12 +113,7 @@ export function registerVoiceTools(server: McpServer): void {
 
       const res = await apiUpload("/voice/uploads", formData);
 
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 
@@ -123,19 +136,56 @@ export function registerVoiceTools(server: McpServer): void {
         .string()
         .optional()
         .describe("Contact group ID (optional)"),
+      retry_attempts: z
+        .number()
+        .int()
+        .min(1)
+        .max(3)
+        .optional()
+        .describe("Retry attempts after a failed call (1-3, API default 3)"),
+      retry_interval_min: z
+        .number()
+        .int()
+        .min(5)
+        .max(180)
+        .optional()
+        .describe("Minutes between retry attempts (5-180, API default 15)"),
+      retry_end_time: z
+        .string()
+        .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, "retry_end_time must be HH:MM (e.g. 09:30)")
+        .optional()
+        .describe(
+          "Cutoff time for retries, HH:MM in America/Sao_Paulo. Must be 08:00-21:45 and at least 10 minutes from now",
+        ),
+      webhook_url: WebhookUrlSchema,
     },
-    async ({ title, voice_upload_id, phones, group_id }) => {
+    async ({
+      title,
+      voice_upload_id,
+      phones,
+      group_id,
+      retry_attempts,
+      retry_interval_min,
+      retry_end_time,
+      webhook_url,
+    }) => {
+      if (retry_end_time) {
+        const problem = checkRetryEndTime(retry_end_time);
+        if (problem) {
+          return { content: [{ type: "text" as const, text: `❌ ${problem}` }], isError: true };
+        }
+      }
+
       const body: Record<string, unknown> = { title, voice_upload_id, phones };
       if (group_id) body.group_id = group_id;
+      if (retry_attempts !== undefined) body.retry_attempts = retry_attempts;
+      if (retry_interval_min !== undefined) body.retry_interval_min = retry_interval_min;
+      if (retry_end_time) body.retry_end_time = retry_end_time;
+      if (webhook_url) body.webhook_url = webhook_url;
 
       const res = await apiRequest("POST", "/voice", body);
 
-      return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(res.body, null, 2) },
-        ],
-        isError: res.status >= 400,
-      };
+      return toToolResult(res);
     },
   );
 }
